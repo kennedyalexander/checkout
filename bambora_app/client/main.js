@@ -16,8 +16,10 @@ Template.hello.helpers({
 Template.hello.events({
   'click .poster' : function(){
     const result =  HTTP.call('POST', ' http://localhost:8090/checkoutSession', {
-                  data: { some: 'json', stuff: 1 }
-                }, (error, result) => {
+                  data: {
+                      "orderID": "12321123",
+                      "orderValue": "233"
+                }}, (error, result) => {
                   console.log(result);
                   if (!error) {
                       console.log("Oranges");

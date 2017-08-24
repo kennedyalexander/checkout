@@ -1,3 +1,5 @@
-checkoutintegration/.idea
+checkoutIntegration/.idea/*
 Php
 meetandeat
+checkoutIntegration/target/
+**/*.iml
