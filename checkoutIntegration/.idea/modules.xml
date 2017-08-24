@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/at.akmrg.samplepayment.iml" filepath="$PROJECT_DIR$/at.akmrg.samplepayment.iml" />
+      <module fileurl="file://$PROJECT_DIR$/at.akmrg.springBootEmpty.iml" filepath="$PROJECT_DIR$/at.akmrg.springBootEmpty.iml" />
     </modules>
   </component>
 </project>

@@ -10,21 +10,20 @@ Template.hello.onCreated(function helloOnCreated() {
 });
 
 Template.hello.helpers({
-  counter() {
-    return Template.instance().counter.get();
-  },
-  poster() {
-    HTTP.call('POST', ' localhost:8090/checkoutSession', {
-                data: { some: 'json', stuff: 1 }
-              }, (error, result) => {
-                if (!error) {
-                  Session.set('twizzled', true);
-                }
+
 });
 
 Template.hello.events({
-  'click button'(event, instance) {
-    // increment the counter when button is clicked
-    instance.counter.set(instance.counter.get() + 1);
-  },
+  'click .poster' : function(){
+    const result =  HTTP.call('POST', ' http://localhost:8090/checkoutSession', {
+                  data: { some: 'json', stuff: 1 }
+                }, (error, result) => {
+                  console.log(result);
+                  if (!error) {
+                      console.log("Oranges");
+                  }
+  })
+  console.log(result);
+  console.log("hhello");
+  }
 });
