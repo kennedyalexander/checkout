@@ -20,13 +20,12 @@ Template.hello.events({
                       "orderID": "12321123",
                       "orderValue": "233"
                 }}, (error, result) => {
-                  console.log(result);
+
                   if (!error) {
-                      console.log("Oranges");
+                    window.location.replace(result.content);
                   }
   })
-  console.log(result);
-  console.log("hhello");
-  Router.go(result);
+  //console.log("hhello");
+  //window.location.replace(result.content);
   }
 });
