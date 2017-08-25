@@ -27,5 +27,6 @@ Template.hello.events({
   })
   console.log(result);
   console.log("hhello");
+  Router.go(result);
   }
 });

@@ -36,7 +36,8 @@ public class MainController {
 		System.out.println("order id: " + order.getOrderID());
 		System.out.println("order value: " + order.getOrderValue());
 				 if (!order.getOrderID().isEmpty() && !order.getOrderValue().isEmpty()) {
-					 return mainService.createCheckoutSession(order, "DKK");
+					 //return mainService.createCheckoutSession(order, "DKK");
+					 return "http://bbc.co.uk/news";
 				 } else {
 					 return "orderID" + order.getOrderID() + " orderValue" + order.getOrderValue();
 				 }
