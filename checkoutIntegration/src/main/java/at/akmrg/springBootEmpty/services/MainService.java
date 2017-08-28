@@ -59,12 +59,12 @@ public class MainService {
 
 		JSONArray arrayCallback = new JSONArray();
 		JSONObject objCallback = new JSONObject();
-		objCallback.put("url", "https://example.org/callback");
+		objCallback.put("url", "https://goodby.city/callback");
 		arrayCallback.put(objCallback);
 
 		JSONObject objUrl = new JSONObject();
-		objUrl.put("accept", "https://example.org/accept");
-		objUrl.put("cancel", "https://example.org/cancel");
+		objUrl.put("accept", "https://goodby.city/accept");
+		objUrl.put("cancel", "https://goodby.city/cancel");
 		objUrl.put("callback", arrayCallback);
 
 		JSONObject objRequest = new JSONObject();
