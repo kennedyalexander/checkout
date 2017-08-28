@@ -1,0 +1,849 @@
+{
+  "apiVersion": "v1",
+  "kind": "Template",
+  "metadata": {
+    "creationTimestamp": null,
+    "name": "${NAME}"
+  },
+  "objects": [
+    {
+      "apiVersion": "v1",
+      "kind": "ImageStream",
+      "metadata": {
+        "creationTimestamp": null,
+        "generation": 1,
+        "labels": {
+          "app": "${RELEASE_NAME}",
+          "role": "jenkins-slave"
+        },
+        "name": "${RELEASE_NAME}"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "ImageStream",
+      "metadata": {
+        "creationTimestamp": null,
+        "generation": 1,
+        "labels": {
+          "app": "${HYBRIS_BUILDER}",
+          "role": "jenkins-slave"
+        },
+        "name": "${HYBRIS_BUILDER}"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "BuildConfig",
+      "metadata": {
+        "annotations": {
+          "openshift.io/display-name": "Catapulted project for branch ${SOURCE_REPOSITORY_REF}",
+          "buildtrigger": "catapult"
+        },
+        "creationTimestamp": null,
+        "labels": {
+          "app": "${NAME}-pipeline"
+        },
+        "name": "${NAME}-pipeline"
+      },
+      "spec": {
+        "nodeSelector": null,
+        "output": {},
+        "postCommit": {},
+        "resources": {},
+        "runPolicy": "Serial",
+        "source": {
+          "git": {
+            "ref": "${SOURCE_REPOSITORY_REF}",
+            "uri": "${SOURCE_REPOSITORY_URL}"
+          },
+          "sourceSecret": {
+            "name": "sshsecret"
+          },
+          "type": "Git"
+        },
+        "strategy": {
+          "jenkinsPipelineStrategy": {
+            "jenkinsfilePath": "docker-hybris/Jenkinsfile"
+          },
+          "type": "JenkinsPipeline"
+        },
+        "triggers": []
+      },
+      "status": {
+        "lastVersion": 0
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "BuildConfig",
+      "metadata": {
+        "name": "${NAME}-runtime",
+        "creationTimestamp": null,
+        "labels": {
+          "app": "${NAME}-runtime"
+        },
+        "annotations": {
+          "openshift.io/generated-by": "Hybris runtime image"
+        }
+      },
+      "spec": {
+        "source": {
+          "type": "Docker",
+          "dockerfile": "FROM ${HYBRIS_PLATFORM_NAMESPACE}/${HYBRIS_PLATFORM}:${HYBRIS_PLATFORM_VERSION} \n\r COPY runtime.zip /opt \n\r RUN cd /opt && unzip runtime.zip -d runtime && rm -f runtime.zip \n\r USER 0 \n\r RUN chown -R 1001:0 /opt/runtime && chmod +x /opt/runtime/hybris/entrypoint.sh && mv /opt/runtime/hybris/entrypoint.sh / \n\r USER 1001 \n\r RUN cd /opt/runtime/hybris && mv bin/custom ../../hybris/bin && rsync -ruo config ../../hybris && mv bin/pmd-ruleset.xml ../../bin && mv toolstack ../../hybris && rm -rf /opt/runtime && cd /opt/hybris/bin/platform && . ./setantenv.sh && ant customize && ant addoninstall -Daddonnames=\"dsgoccaddon\" -DaddonStorefront.ycommercewebservices=\"ycommercewebservices\" && ant all\n\r EXPOSE 9001 9002 \n\r ENTRYPOINT [\"/entrypoint.sh\"]",
+          "binary": {
+            "asFile": "runtime.zip"
+          },
+          "secrets": [
+          ]
+        },
+        "strategy": {
+          "type": "docker",
+          "dockerStrategy": {
+            "from": {
+              "kind": "ImageStreamTag",
+              "namespace": "${HYBRIS_PLATFORM_NAMESPACE}",
+              "name": "${HYBRIS_PLATFORM}:${HYBRIS_PLATFORM_VERSION}"
+            }
+          }
+        },
+        "output": {
+          "to": {
+            "kind": "${RELEASE_KIND}",
+            "name": "${RELEASE_NAME}:${RELEASE_VERSION}"
+          }
+        },
+        "resources": {
+        },
+        "postCommit": {
+        }
+      },
+      "status": {
+        "lastVersion": 1
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "BuildConfig",
+      "metadata": {
+        "creationTimestamp": null,
+        "labels": {
+          "app": "${HYBRIS_BUILDER}"
+        },
+        "name": "${HYBRIS_BUILDER}"
+      },
+      "spec": {
+        "nodeSelector": null,
+        "output": {
+          "to": {
+            "kind": "ImageStreamTag",
+            "name": "${HYBRIS_BUILDER}:${HYBRIS_BUILDER_VERSION}"
+          }
+        },
+        "postCommit": {},
+        "resources": {},
+        "runPolicy": "Serial",
+        "source": {
+          "git": {
+            "ref": "${SOURCE_REPOSITORY_REF}",
+            "uri": "${SOURCE_REPOSITORY_URL}"
+          },
+          "dockerfile": "FROM ${HYBRIS_PLATFORM_NAMESPACE}/${HYBRIS_PLATFORM}:${HYBRIS_PLATFORM_VERSION}",
+          "sourceSecret": {
+            "name": "sshsecret"
+          },
+          "type": "Git"
+        },
+        "strategy": {
+          "dockerStrategy": {
+            "from": {
+              "kind": "ImageStreamTag",
+              "name": "${HYBRIS_PLATFORM}:${HYBRIS_PLATFORM_VERSION}",
+              "namespace": "${HYBRIS_PLATFORM_NAMESPACE}"
+            }
+          },
+          "type": "Docker"
+        },
+        "triggers": []
+      },
+      "status": {
+        "lastVersion": 0
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "${DATABASE_SERVICE_NAME}"
+      },
+      "spec": {
+        "ports": [
+          {
+            "name": "mariadb",
+            "port": 3306
+          }
+        ],
+        "selector": {
+          "name": "${DATABASE_SERVICE_NAME}"
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "annotations": {
+          "openshift.io/generated-by": "OpenShiftWebConsole"
+        },
+        "creationTimestamp": null,
+        "labels": {
+          "app": "sonarqube"
+        },
+        "name": "sonarqube"
+      },
+      "spec": {
+        "ports": [
+          {
+            "name": "9000-tcp",
+            "port": 9000,
+            "protocol": "TCP",
+            "targetPort": 9000
+          }
+        ],
+        "selector": {
+          "deploymentconfig": "sonarqube"
+        },
+        "sessionAffinity": "None",
+        "type": "ClusterIP"
+      },
+      "status": {
+        "loadBalancer": {}
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "annotations": {
+          "openshift.io/generated-by": "OpenShiftWebConsole"
+        },
+        "creationTimestamp": null,
+        "labels": {
+          "app": "${NAME}"
+        },
+        "name": "${NAME}"
+      },
+      "spec": {
+        "ports": [
+          {
+            "name": "9002-tcp",
+            "port": 9002,
+            "protocol": "TCP",
+            "targetPort": 9002
+          }
+        ],
+        "selector": {
+          "deploymentconfig": "${NAME}-runtime"
+        },
+        "sessionAffinity": "None",
+        "type": "ClusterIP"
+      },
+      "status": {
+        "loadBalancer": {}
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Route",
+      "metadata": {
+        "annotations": {
+          "openshift.io/host.generated": "true"
+        },
+        "creationTimestamp": null,
+        "labels": {
+          "app": "sonarqube"
+        },
+        "name": "sonarqube"
+      },
+      "spec": {
+        "host": "sonarqube-${NAME}-${SOURCE_REPOSITORY_REF}.dsdigital.dk",
+        "port": {
+          "targetPort": "9000-tcp"
+        },
+        "to": {
+          "kind": "Service",
+          "name": "sonarqube",
+          "weight": 100
+        }
+      },
+      "status": {
+        "ingress": [
+          {
+            "conditions": [
+              {
+                "lastTransitionTime": "2017-01-27T09:01:20Z",
+                "status": "True",
+                "type": "Admitted"
+              }
+            ],
+            "host": "sonarqube-${NAME}-${SOURCE_REPOSITORY_REF}.dsdigital.dk",
+            "routerName": "router"
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Route",
+      "metadata": {
+        "annotations": {
+          "openshift.io/host.generated": "true"
+        },
+        "creationTimestamp": null,
+        "labels": {
+          "app": "runtime"
+        },
+        "name": "hybris9002"
+      },
+      "spec": {
+        "host": "${NAME}-${SOURCE_REPOSITORY_REF}.dsdigital.dk",
+        "port": {
+          "targetPort": "9002-tcp"
+        },
+        "tls": {
+          "termination": "passthrough"
+        },
+        "to": {
+          "kind": "Service",
+          "name": "${NAME}",
+          "weight": 100
+        }
+      },
+      "status": {
+        "ingress": [
+          {
+            "conditions": [
+              {
+                "status": "True",
+                "type": "Admitted"
+              }
+            ],
+            "host": "${NAME}-${SOURCE_REPOSITORY_REF}.dsdigital.dk",
+            "routerName": "router"
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "DeploymentConfig",
+      "metadata": {
+        "name": "${DATABASE_SERVICE_NAME}"
+      },
+      "spec": {
+        "replicas": 1,
+        "selector": {
+          "name": "${DATABASE_SERVICE_NAME}"
+        },
+        "strategy": {
+          "type": "Recreate"
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "name": "${DATABASE_SERVICE_NAME}"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "env": [
+                  {
+                    "name": "MYSQL_USER",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "key": "database-user",
+                        "name": "${DATABASE_SERVICE_NAME}"
+                      }
+                    }
+                  },
+                  {
+                    "name": "MYSQL_PASSWORD",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "key": "database-password",
+                        "name": "${DATABASE_SERVICE_NAME}"
+                      }
+                    }
+                  },
+                  {
+                    "name": "MYSQL_ROOT_PASSWORD",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "key": "database-root-password",
+                        "name": "${DATABASE_SERVICE_NAME}"
+                      }
+                    }
+                  },
+                  {
+                    "name": "MYSQL_DATABASE",
+                    "value": "${MYSQL_DATABASE}"
+                  }
+                ],
+                "image": " ",
+                "imagePullPolicy": "IfNotPresent",
+                "livenessProbe": {
+                  "initialDelaySeconds": 30,
+                  "tcpSocket": {
+                    "port": 3306
+                  },
+                  "timeoutSeconds": 1
+                },
+                "name": "mariadb",
+                "ports": [
+                  {
+                    "containerPort": 3306
+                  }
+                ],
+                "readinessProbe": {
+                  "exec": {
+                    "command": [
+                      "/bin/sh",
+                      "-i",
+                      "-c",
+                      "MYSQL_PWD=\"$MYSQL_PASSWORD\" mysql -h 127.0.0.1 -u $MYSQL_USER -D $MYSQL_DATABASE -e 'SELECT 1'"
+                    ]
+                  },
+                  "initialDelaySeconds": 5,
+                  "timeoutSeconds": 1
+                },
+                "volumeMounts": [
+                  {
+                    "mountPath": "/var/lib/mysql/data",
+                    "name": "${DATABASE_SERVICE_NAME}-data"
+                  }
+                ]
+              }
+            ],
+            "volumes": [
+              {
+                "emptyDir": {
+                  "medium": ""
+                },
+                "name": "${DATABASE_SERVICE_NAME}-data"
+              }
+            ]
+          }
+        },
+        "triggers": [
+          {
+            "imageChangeParams": {
+              "automatic": true,
+              "containerNames": [
+                "mariadb"
+              ],
+              "from": {
+                "kind": "ImageStreamTag",
+                "name": "mariadb:10.1",
+                "namespace": "openshift"
+              }
+            },
+            "type": "ImageChange"
+          },
+          {
+            "type": "ConfigChange"
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "DeploymentConfig",
+      "metadata": {
+        "annotations": {
+          "openshift.io/generated-by": "OpenShiftWebConsole"
+        },
+        "creationTimestamp": null,
+        "generation": 4,
+        "labels": {
+          "app": "sonarqube"
+        },
+        "name": "sonarqube"
+      },
+      "spec": {
+        "replicas": 1,
+        "selector": {
+          "app": "sonarqube",
+          "deploymentconfig": "sonarqube"
+        },
+        "strategy": {
+          "resources": {},
+          "rollingParams": {
+            "intervalSeconds": 1,
+            "maxSurge": "25%",
+            "maxUnavailable": "25%",
+            "timeoutSeconds": 600,
+            "updatePeriodSeconds": 1
+          },
+          "type": "Rolling"
+        },
+        "template": {
+          "metadata": {
+            "annotations": {
+              "openshift.io/generated-by": "OpenShiftWebConsole"
+            },
+            "creationTimestamp": null,
+            "labels": {
+              "app": "sonarqube",
+              "deploymentconfig": "sonarqube"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "image": "sonarqube:latest",
+                "imagePullPolicy": "Always",
+                "name": "sonarqube",
+                "ports": [
+                  {
+                    "containerPort": 9000,
+                    "protocol": "TCP"
+                  }
+                ],
+                "resources": {},
+                "terminationMessagePath": "/dev/termination-log",
+                "volumeMounts": [
+                  {
+                    "mountPath": "/opt/sonarqube/data",
+                    "name": "sonarqube-1"
+                  }
+                ]
+              }
+            ],
+            "dnsPolicy": "ClusterFirst",
+            "restartPolicy": "Always",
+            "securityContext": {},
+            "terminationGracePeriodSeconds": 30,
+            "volumes": [
+              {
+                "emptyDir": {},
+                "name": "sonarqube-1"
+              }
+            ]
+          }
+        },
+        "test": false,
+        "triggers": []
+      },
+      "status": {
+        "availableReplicas": 1,
+        "observedGeneration": 4,
+        "replicas": 1,
+        "updatedReplicas": 1
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "DeploymentConfig",
+      "metadata": {
+        "annotations": {
+          "openshift.io/generated-by": "OpenShiftWebConsole"
+        },
+        "creationTimestamp": null,
+        "generation": 1,
+        "labels": {
+          "app": "${NAME}-runtime"
+        },
+        "name": "${NAME}-runtime"
+      },
+      "spec": {
+        "replicas": 1,
+        "selector": {
+          "app": "${NAME}-runtime",
+          "deploymentconfig": "${NAME}-runtime"
+        },
+        "strategy": {
+          "resources": {},
+          "rollingParams": {
+            "intervalSeconds": 1,
+            "maxSurge": "25%",
+            "maxUnavailable": "25%",
+            "timeoutSeconds": 600,
+            "updatePeriodSeconds": 1
+          },
+          "type": "Rolling"
+        },
+        "template": {
+          "metadata": {
+            "annotations": {
+              "openshift.io/generated-by": "OpenShiftWebConsole"
+            },
+            "creationTimestamp": null,
+            "labels": {
+              "app": "${NAME}-runtime",
+              "deploymentconfig": "${NAME}-runtime"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "env": [
+                  {
+                    "name": "INITIALIZE_HYBRIS",
+                    "value": "y"
+                  },
+                  {
+                    "name": "RUN_HYBRIS",
+                    "value": "y"
+                  }
+                ],
+                "image": " ",
+                "imagePullPolicy": "Always",
+                "name": "${RELEASE_NAME}",
+                "ports": [
+                  {
+                    "containerPort": 9001,
+                    "protocol": "TCP"
+                  },
+                  {
+                    "containerPort": 9002,
+                    "protocol": "TCP"
+                  }
+                ],
+                "resources": {},
+                "terminationMessagePath": "/dev/termination-log"
+              }
+            ],
+            "dnsPolicy": "ClusterFirst",
+            "restartPolicy": "Always",
+            "securityContext": {},
+            "terminationGracePeriodSeconds": 30
+          }
+        },
+        "test": false,
+        "triggers": [
+          {
+            "type": "ImageChange",
+            "imageChangeParams": {
+              "automatic": false,
+              "containerNames": [
+                "${RELEASE_NAME}"
+              ],
+              "from": {
+                "kind": "${RELEASE_KIND}",
+                "name": "${RELEASE_NAME}:${RELEASE_VERSION}"
+              }
+            }
+          }
+        ]
+      },
+      "status": {
+        "availableReplicas": 1,
+        "observedGeneration": 1,
+        "replicas": 1
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Policy",
+      "metadata": {
+        "creationTimestamp": null,
+        "name": "default"
+      },
+      "roles": [
+        {
+          "name": "shared-resource-viewer",
+          "role": {
+            "metadata": {
+              "name": "shared-resource-viewer",
+              "namespace": "${NAMESPACE}"
+            },
+            "rules": [
+              {
+                "apiGroups": [
+                  ""
+                ],
+                "attributeRestrictions": null,
+                "resources": [
+                  "templates"
+                ],
+                "verbs": [
+                  "get",
+                  "list",
+                  "watch"
+                ]
+              },
+              {
+                "apiGroups": [
+                  ""
+                ],
+                "attributeRestrictions": null,
+                "resources": [
+                  "imagestreamimages",
+                  "imagestreams",
+                  "imagestreamtags"
+                ],
+                "verbs": [
+                  "get",
+                  "list",
+                  "watch"
+                ]
+              },
+              {
+                "apiGroups": [
+                  ""
+                ],
+                "attributeRestrictions": null,
+                "resources": [
+                  "imagestreams/layers"
+                ],
+                "verbs": [
+                  "get"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Secret",
+      "metadata": {
+        "name": "${DATABASE_SERVICE_NAME}"
+      },
+      "stringData": {
+        "database-password": "${MYSQL_PASSWORD}",
+        "database-root-password": "${MYSQL_ROOT_PASSWORD}",
+        "database-user": "${MYSQL_USER}"
+      }
+    }
+  ],
+  "parameters": [
+    {
+      "name": "APPLICATION_DOMAIN",
+      "description": "The name assigned to all of the frontend objects defined in this template.",
+      "displayName": "Application domain",
+      "required": false,
+      "value": ""
+    },
+    {
+      "name": "DATABASE_SERVICE_NAME",
+      "displayName": "Database Service Name",
+      "description": "The name of the OpenShift Service exposed for the database.",
+      "value": "mariadb",
+      "required": true
+    },
+    {
+      "name": "MYSQL_USER",
+      "displayName": "MariaDB Connection Username",
+      "description": "Username for MariaDB user that will be used for accessing the database.",
+      "generate": "expression",
+      "value": "hybris",
+      "from": "user[A-Z0-9]{3}",
+      "required": true
+    },
+    {
+      "name": "MYSQL_PASSWORD",
+      "displayName": "MariaDB Connection Password",
+      "description": "Password for the MariaDB connection user.",
+      "value": "hybris",
+      "generate": "expression",
+      "from": "[a-zA-Z0-9]{16}",
+      "required": true
+    },
+    {
+      "name": "MYSQL_ROOT_PASSWORD",
+      "displayName": "MariaDB root Password",
+      "description": "Password for the MariaDB root user.",
+      "value": "hybris",
+      "generate": "expression",
+      "from": "[a-zA-Z0-9]{16}",
+      "required": true
+    },
+    {
+      "name": "MYSQL_DATABASE",
+      "displayName": "MariaDB Database Name",
+      "description": "Name of the MariaDB database accessed.",
+      "value": "hybris",
+      "required": true
+    },
+    {
+      "name": "SOURCE_REPOSITORY_URL",
+      "description": "The URL of the repository with your application source code.",
+      "displayName": "Git Repository URL",
+      "required": true,
+      "value": "git@bitbucket.org:DanskSupermarked/hybris.git"
+    },
+    {
+      "name": "SOURCE_REPOSITORY_REF",
+      "description": "Set this to a branch name, tag or other ref of your repository if you are not using the default branch.",
+      "displayName": "Git Reference",
+      "value": "master"
+    },
+    {
+      "name": "HYBRIS_PLATFORM",
+      "description": "The Hybris Platform",
+      "displayName": "Hybris Platform",
+      "required": false,
+      "value": "hybrisplatform"
+    },
+    {
+      "name": "HYBRIS_PLATFORM_VERSION",
+      "description": "The version of Hybris upstream image",
+      "displayName": "Hybris Platform Version",
+      "required": false,
+      "value": "6.4.0.0.0"
+    },
+    {
+      "name": "HYBRIS_PLATFORM_NAMESPACE",
+      "description": "The name of hybris components namespace",
+      "displayName": "Hybris Components",
+      "required": false,
+      "value": "hybriscomponents"
+    },
+    {
+      "name": "NAME",
+      "description": "Application name",
+      "displayName": "Name",
+      "required": true,
+      "value": "hybris"
+    },
+    {
+      "name": "NAMESPACE",
+      "description": "metadata namespace.",
+      "displayName": "Namespace",
+      "value": "hybris"
+    },
+    {
+      "name": "HYBRIS_BUILDER",
+      "description": "metadata hybris-builder.",
+      "displayName": "Hybris-builder",
+      "value": "hybris6-builder"
+    },
+    {
+      "name": "HYBRIS_BUILDER_VERSION",
+      "displayName": "Hybris jenkins slave version number",
+      "value": "latest"
+    },
+    {
+      "description": "The name of the release candidate",
+      "displayName": "Name",
+      "name": "RELEASE_NAME",
+      "required": true,
+      "value": "hybris-runtime"
+    },
+    {
+      "name": "RELEASE_VERSION",
+      "displayName": "Version of the release candidate",
+      "description": "Image version tag.",
+      "value": "latest"
+    },
+    {
+      "name": "RELEASE_KIND",
+      "displayName": "image kind",
+      "description": "Image kind (ImageStreamTag or DockerImage).",
+      "value": "ImageStreamTag"
+    }
+  ]
+}

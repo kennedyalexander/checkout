@@ -1,0 +1,20 @@
+{
+	"name": "admin",
+	"roleBinding": {
+		"metadata": {
+			"name": "admin",
+			"namespace": "${NAMESPACE}"
+		},
+		"userNames": null,
+		"groupNames": [
+			"dsg-ldap"
+		],
+		"subjects": [{
+			"kind": "Group",
+			"name": "dsg-ldap"
+		}],
+		"roleRef": {
+			"name": "admin"
+		}
+	}
+}
