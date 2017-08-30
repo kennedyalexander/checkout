@@ -32,7 +32,7 @@ public class MainService {
     public String test(){
         return "you asked for a new session";
     }
-
+    //These are not secret keys but test keys for a public test environment
     public String createCheckoutSession(Order order, String orderCurrency) throws JSONException, IOException {
 		String accessToken = "hJ5t5BBva8PxnEdcAvQl";
 		String merchantNumber = "T072064101";
