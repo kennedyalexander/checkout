@@ -18,14 +18,9 @@ public class MainController {
 	@Autowired
 	MainService mainService;
 
-	@GetMapping("/getOranges")
-	public String getOranges(@RequestParam(value="orange") String orange) {
-		return orange;
-	}
-
-	@GetMapping("/getLemons")
-	public String getLemons() {
-		return "Lemons";
+	@GetMapping("/")
+	public String aliveCheck() {
+		return "Alive";
 	}
 
 	@CrossOrigin
